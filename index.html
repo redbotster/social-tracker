@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>1Claw Social Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: one column; summary line, account cards by group, then post tables. Brand kit: red on near-black. */
+  :root {
+    --bg: #0E0D10; --panel: #17151A; --line: #2A272E; --fg: #FAFAFA; --muted: #A09BA6;
+    --red: #E21D20; --up: #3FB37F; --down: #E5484D;
+    --sans: "Geist", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    --mono: "Geist Mono", ui-monospace, Menlo, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 15px; }
+  a { color: inherit; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 32px max(16px, env(safe-area-inset-right)) 64px max(16px, env(safe-area-inset-left)); display: grid; gap: 36px; }
+  header { display: grid; gap: 8px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: .02em; }
+  .brand i { width: 10px; height: 10px; background: var(--red); border-radius: 2px; display: inline-block; }
+  h1 { font-size: clamp(26px, 4vw, 36px); margin: 0; font-weight: 600; text-wrap: balance; }
+  .lede { color: var(--muted); margin: 0; max-width: 70ch; line-height: 1.5; }
+  .lede b { color: var(--fg); font-weight: 500; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 12px; font-weight: 500; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 6px; min-width: 0; text-decoration: none; }
+  .card:hover { border-color: #4A4550; }
+  .card .who { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 13px; }
+  .card .plat { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; padding: 2px 6px; border: 1px solid var(--line); border-radius: 4px; }
+  .num { font-size: 30px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .sub { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .up { color: var(--up); } .down { color: var(--down); }
+  .card.pending { border-style: dashed; }
+  .card.pending .num { font-size: 15px; font-weight: 500; color: var(--muted); }
+  svg.spark { width: 100%; height: 36px; display: block; }
+  .tablebox { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-weight: 500; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
+  th.n, td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  th[data-sort] { cursor: pointer; user-select: none; }
+  th[data-sort]:hover, th.active { color: var(--fg); }
+  tr:last-child td { border-bottom: 0; }
+  td.post { min-width: 260px; max-width: 460px; }
+  td.post a { text-decoration: none; }
+  td.post a:hover { text-decoration: underline; text-decoration-color: var(--red); }
+  .tag { font-family: var(--mono); font-size: 11px; color: var(--muted); display: block; margin-bottom: 2px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .controls button { background: transparent; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+  .controls button[aria-pressed="true"] { color: var(--fg); border-color: var(--red); }
+  .controls button:focus-visible, th[data-sort]:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+  footer { color: var(--muted); font-size: 12px; line-height: 1.6; }
+  .err { color: var(--down); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><i></i>1Claw</div>
+    <h1>Social Tracker</h1>
+    <p class="lede" id="lede">Loading…</p>
+  </header>
+
+  <section id="s-1claw"><h2>1Claw accounts</h2><div class="cards" id="cards-1claw"></div></section>
+  <section id="s-personal"><h2>Personal accounts</h2><div class="cards" id="cards-personal"></div></section>
+
+  <section id="s-gaining">
+    <h2>Gaining since yesterday</h2>
+    <div class="tablebox"><table id="t-gain"><thead><tr><th>Post</th><th class="n">New views</th><th class="n">Total views</th><th class="n">Likes</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section id="s-posts">
+    <h2>Posts</h2>
+    <div class="controls" id="filters" role="group" aria-label="Filter posts by time">
+      <button type="button" data-days="7" aria-pressed="true">Last 7 days</button>
+      <button type="button" data-days="30" aria-pressed="false">Last 30 days</button>
+      <button type="button" data-days="0" aria-pressed="false">All tracked</button>
+    </div>
+    <div class="tablebox"><table id="t-posts"><thead><tr>
+      <th>Post</th>
+      <th class="n" data-sort="posted_at" tabindex="0">Posted</th>
+      <th class="n active" data-sort="views" tabindex="0">Views</th>
+      <th class="n" data-sort="likes" tabindex="0">Likes</th>
+      <th class="n" data-sort="comments" tabindex="0">Comments</th>
+      <th class="n" data-sort="shares" tabindex="0">Shares</th>
+      <th class="n" data-sort="eng" tabindex="0">Engagement</th>
+    </tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+<script>
+(function () {
+  const fmt = new Intl.NumberFormat("en-US");
+  const compact = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
+  const n = (v) => (v === null || v === undefined || v === "" ? null : Number(v));
+  const show = (v) => (n(v) === null ? "–" : fmt.format(n(v)));
+  const PLAT = { x: "X", tiktok: "TikTok", youtube: "YouTube", instagram: "Instagram", linkedin: "LinkedIn" };
+  let DATA = null, days = 7, sortKey = "views";
+
+  function el(tag, attrs, ...kids) {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (k === "class") e.className = v; else if (v !== null && v !== undefined) e.setAttribute(k, v);
+    }
+    for (const k of kids) if (k !== null && k !== undefined) e.append(k instanceof Node ? k : document.createTextNode(String(k)));
+    return e;
+  }
+
+  function spark(series) {
+    const NS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("class", "spark"); svg.setAttribute("viewBox", "0 0 200 36"); svg.setAttribute("preserveAspectRatio", "none");
+    const pts = series.filter((p) => n(p[1]) !== null);
+    if (pts.length < 2) return svg;
+    const vals = pts.map((p) => n(p[1])), lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
+    const xy = pts.map((p, i) => [ (i / (pts.length - 1)) * 196 + 2, 32 - ((n(p[1]) - lo) / span) * 28 ]);
+    const line = document.createElementNS(NS, "polyline");
+    line.setAttribute("points", xy.map((p) => p.join(",")).join(" "));
+    line.setAttribute("fill", "none"); line.setAttribute("stroke", "#E21D20"); line.setAttribute("stroke-width", "1.5");
+    line.setAttribute("vector-effect", "non-scaling-stroke");
+    const dot = document.createElementNS(NS, "circle");
+    const last = xy[xy.length - 1];
+    dot.setAttribute("cx", last[0]); dot.setAttribute("cy", last[1]); dot.setAttribute("r", "2.5"); dot.setAttribute("fill", "#E21D20");
+    svg.append(line, dot);
+    svg.setAttribute("role", "img"); svg.setAttribute("aria-label", "Followers over time");
+    return svg;
+  }
+
+  function delta(v, label) {
+    if (v === null || v === undefined) return el("span", { class: "sub" }, "First snapshot " + label);
+    const cls = v > 0 ? "up" : v < 0 ? "down" : "";
+    return el("span", { class: "sub" }, el("span", { class: cls }, (v > 0 ? "+" : "") + fmt.format(v)), " " + label);
+  }
+
+  function card(a) {
+    if (!a.tracked) {
+      return el("div", { class: "card pending" },
+        el("div", { class: "who" }, el("span", null, a.handle), el("span", { class: "plat" }, PLAT[a.platform] || a.platform)),
+        el("div", { class: "num" }, "Not tracked yet"),
+        el("div", { class: "sub" }, a.note || ""));
+    }
+    return el("a", { class: "card", href: a.url, target: "_blank", rel: "noopener" },
+      el("div", { class: "who" }, el("span", null, a.handle), el("span", { class: "plat" }, PLAT[a.platform] || a.platform)),
+      el("div", { class: "num" }, show(a.followers)),
+      el("div", { class: "sub" }, a.platform === "youtube" ? "subscribers" : "followers"),
+      delta(a.change_7d, a.change_days ? `in ${a.change_days} day${a.change_days === 1 ? "" : "s"}` : "(no history yet)"),
+      spark(a.series || []));
+  }
+
+  function postCell(p) {
+    const date = p.posted_at ? p.posted_at.slice(0, 10) : "";
+    return el("td", { class: "post" },
+      el("span", { class: "tag" }, `${PLAT[p.platform] || p.platform} · ${p.handle}${p.kind && p.kind !== "post" ? " · " + p.kind : ""}`),
+      el("a", { href: p.url, target: "_blank", rel: "noopener" }, p.text || "(untitled)"));
+  }
+
+  function renderPosts() {
+    const cut = days ? Date.now() - days * 864e5 : 0;
+    let rows = DATA.posts.filter((p) => !days || (p.posted_at && Date.parse(p.posted_at) >= cut));
+    rows = rows.map((p) => ({ ...p, eng: n(p.views) ? ((n(p.likes) || 0) + (n(p.comments) || 0) + (n(p.shares) || 0)) / n(p.views) : null }));
+    rows.sort((a, b) => {
+      const av = a[sortKey], bv = b[sortKey];
+      if (sortKey === "posted_at") return String(bv || "").localeCompare(String(av || ""));
+      return (n(bv) ?? -1) - (n(av) ?? -1);
+    });
+    const tb = document.querySelector("#t-posts tbody");
+    tb.replaceChildren(...(rows.length ? rows.slice(0, 150).map((p) => el("tr", null,
+      postCell(p),
+      el("td", { class: "n" }, p.posted_at ? p.posted_at.slice(0, 10) : "–"),
+      el("td", { class: "n" }, show(p.views)),
+      el("td", { class: "n" }, show(p.likes)),
+      el("td", { class: "n" }, show(p.comments)),
+      el("td", { class: "n" }, show(p.shares)),
+      el("td", { class: "n" }, p.eng === null ? "–" : (p.eng * 100).toFixed(1) + "%"))) :
+      [el("tr", null, el("td", { colspan: "7", class: "sub" }, "No tracked posts in this window."))]));
+  }
+
+  function render(d) {
+    DATA = d;
+    const tracked = d.accounts.filter((a) => a.tracked);
+    const total = tracked.reduce((s, a) => s + (n(a.followers) || 0), 0);
+    const week = d.posts.filter((p) => p.posted_at && Date.parse(p.posted_at) >= Date.now() - 7 * 864e5);
+    const weekViews = week.reduce((s, p) => s + (n(p.views) || 0), 0);
+    const top = week.slice().sort((a, b) => (n(b.views) || 0) - (n(a.views) || 0))[0];
+    const lede = document.getElementById("lede");
+    lede.replaceChildren(
+      el("b", null, fmt.format(total)), ` followers across ${tracked.length} tracked accounts. `,
+      el("b", null, fmt.format(week.length)), " posts in the last 7 days drew ",
+      el("b", null, compact.format(weekViews)), " views",
+      top ? "; the top one was " : ".",
+      top ? el("a", { href: top.url, target: "_blank", rel: "noopener" }, `${PLAT[top.platform]} ${top.handle} (${compact.format(n(top.views) || 0)})`) : null,
+      top ? "." : null);
+
+    for (const g of ["1claw", "personal"]) {
+      document.getElementById("cards-" + g).replaceChildren(...d.accounts.filter((a) => a.group === g).map(card));
+    }
+
+    const gain = d.posts.filter((p) => n(p.views_gain) > 0).sort((a, b) => n(b.views_gain) - n(a.views_gain)).slice(0, 8);
+    const gb = document.querySelector("#t-gain tbody");
+    gb.replaceChildren(...(gain.length ? gain.map((p) => el("tr", null, postCell(p),
+      el("td", { class: "n up" }, "+" + fmt.format(n(p.views_gain))), el("td", { class: "n" }, show(p.views)), el("td", { class: "n" }, show(p.likes)))) :
+      [el("tr", null, el("td", { colspan: "4", class: "sub" }, "Needs two daily snapshots. Check back tomorrow."))]));
+
+    renderPosts();
+    const when = new Date(d.generated_at);
+    document.getElementById("foot").textContent =
+      `Updated ${when.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}. Snapshots taken daily since ${d.first_date}. ` +
+      `Views are as each platform reports them; X reposts are excluded. Engagement = (likes + comments + shares) / views.`;
+  }
+
+  document.getElementById("filters").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-days]"); if (!b || !DATA) return;
+    days = Number(b.dataset.days);
+    document.querySelectorAll("#filters button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    renderPosts();
+  });
+  document.querySelectorAll("th[data-sort]").forEach((th) => {
+    const go = () => {
+      if (!DATA) return;
+      sortKey = th.dataset.sort;
+      document.querySelectorAll("th[data-sort]").forEach((x) => x.classList.toggle("active", x === th));
+      renderPosts();
+    };
+    th.addEventListener("click", go);
+    th.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+  });
+
+  fetch("data.json?v=" + Date.now()).then((r) => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(render)
+    .catch((e) => { const l = document.getElementById("lede"); l.className = "lede err"; l.textContent = "Couldn't load the data file (" + e.message + "). It refreshes daily; try again shortly."; });
+})();
+</script>
+</body>
+</html>
