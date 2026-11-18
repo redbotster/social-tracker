@@ -56,6 +56,32 @@
   .controls button:focus-visible, th[data-sort]:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
   footer { color: var(--muted); font-size: 12px; line-height: 1.6; }
   .err { color: var(--down); }
+  .brief { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--red); border-radius: 10px; padding: 20px; display: grid; gap: 16px; }
+  .brief .head { font-size: 18px; font-weight: 500; line-height: 1.45; margin: 0; text-wrap: pretty; }
+  .bcols { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+  .bcols h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .07em; margin: 0 0 8px; font-weight: 500; color: var(--muted); }
+  .bcols h3 b { color: var(--fg); font-weight: 600; }
+  .bcols ul { margin: 0; padding-left: 18px; display: grid; gap: 10px; line-height: 1.45; font-size: 14px; }
+  .bcols .ev { display: block; color: var(--muted); font-size: 12.5px; margin-top: 3px; }
+  .bcols .ev a { color: var(--muted); }
+  .rules { font-size: 13.5px; color: var(--muted); line-height: 1.5; margin: 0; }
+  .rules b { color: var(--fg); font-weight: 500; }
+  .liftbar { position: relative; height: 10px; min-width: 120px; background: transparent; }
+  .liftbar .base { position: absolute; top: -3px; bottom: -3px; width: 1px; background: var(--muted); }
+  .liftbar .bar { position: absolute; top: 0; height: 10px; border-radius: 4px; }
+  .liftbar .bar.pos { background: var(--red); } .liftbar .bar.neg { background: #5A5560; }
+  tr.thin td { opacity: .55; }
+  .pill { font-family: var(--mono); font-size: 10.5px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; margin-left: 6px; white-space: nowrap; }
+  .chart { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; position: relative; }
+  .chart svg { width: 100%; height: 180px; display: block; overflow: visible; }
+  .tip { position: absolute; pointer-events: none; background: #000; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: 12px; white-space: nowrap; opacity: 0; transition: opacity .1s; }
+  .clusters { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+  .cl { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 10px; min-width: 0; }
+  .cl p { margin: 0; font-size: 14px; line-height: 1.45; }
+  .cl table { font-size: 13px; } .cl td, .cl th { padding: 6px 4px; }
+  .note { color: var(--muted); font-size: 13px; margin: -4px 0 12px; line-height: 1.5; max-width: 80ch; }
+  select { background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font: inherit; font-size: 13px; }
+
 </style>
 </head>
 <body>
@@ -65,6 +91,41 @@
     <h1>Social Tracker</h1>
     <p class="lede" id="lede">Loading…</p>
   </header>
+
+
+  <section id="s-brief" hidden>
+    <h2 id="brief-h">This week's briefing</h2>
+    <div class="brief" id="brief"></div>
+  </section>
+
+  <section id="s-working" hidden>
+    <h2>What's working</h2>
+    <p class="note">Lift = a post's reach divided by its own account's normal (median of nearby posts), so 1.0× is an ordinary post for that account and 2.0× is double. Hit rate = share of posts at 1.5× or better. Faded rows have fewer than 4 posts: a hint, not a finding. Personal YouTube and replies are left out.</p>
+    <div class="controls" id="dimbtns" role="group" aria-label="Break results down by"></div>
+    <div class="controls" id="winbtns" role="group" aria-label="Time window">
+      <button type="button" data-win="dimensions" aria-pressed="true">Last 120 days</button>
+      <button type="button" data-win="dimensions_30d" aria-pressed="false">Last 30 days</button>
+    </div>
+    <div class="tablebox"><table id="t-dim"><thead><tr><th id="dimname">Topic</th><th class="n">Posts</th><th class="n">Median lift</th><th></th><th class="n">Hit rate</th><th class="n">Engagement</th><th>Best example</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section id="s-trend" hidden>
+    <h2>Typical post, week by week</h2>
+    <p class="note">Median lift of the posts published each week. Above the line means that week's posts beat their accounts' normal. The newest two weeks are left out while their posts are still collecting views.</p>
+    <div class="chart" id="trend"><div class="tip" id="tip"></div></div>
+  </section>
+
+  <section id="s-clusters" hidden>
+    <h2>Same message, different platforms</h2>
+    <p class="note">The same post run on more than one account. Compare lift, not raw views: each account has a different normal.</p>
+    <div class="clusters" id="clusters"></div>
+  </section>
+
+  <section id="s-growth" hidden>
+    <h2>Follower gains vs what we posted</h2>
+    <div class="controls"><select id="growsel" aria-label="Account"></select></div>
+    <div class="tablebox"><table id="t-grow"><thead><tr><th>Day</th><th class="n">Followers</th><th class="n">Change</th><th class="n">Posts</th><th>Top post that day</th></tr></thead><tbody></tbody></table></div>
+  </section>
 
   <section id="s-1claw"><h2>1Claw accounts</h2><div class="cards" id="cards-1claw"></div></section>
   <section id="s-personal"><h2>Personal accounts</h2><div class="cards" id="cards-personal"></div></section>
@@ -89,7 +150,14 @@
       <th class="n" data-sort="comments" tabindex="0">Comments</th>
       <th class="n" data-sort="shares" tabindex="0">Shares</th>
       <th class="n" data-sort="eng" tabindex="0">Engagement</th>
+      <th class="n" data-sort="lift" tabindex="0">Lift</th>
+      <th class="n">Day 1 / 3 / 7</th>
     </tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section id="s-yt" hidden>
+    <h2>Personal YouTube (kept out of the 1Claw trends)</h2>
+    <div class="tablebox"><table id="t-yt"><thead><tr><th>Video</th><th class="n">Views</th><th class="n">Likes</th></tr></thead><tbody></tbody></table></div>
   </section>
 
   <footer id="foot"></footer>
@@ -101,7 +169,12 @@
   const n = (v) => (v === null || v === undefined || v === "" ? null : Number(v));
   const show = (v) => (n(v) === null ? "–" : fmt.format(n(v)));
   const PLAT = { x: "X", tiktok: "TikTok", youtube: "YouTube", instagram: "Instagram", linkedin: "LinkedIn" };
-  let DATA = null, days = 7, sortKey = "views";
+  let DATA = null, INS = null, days = 7, sortKey = "views", dim = "topic", win = "dimensions";
+  const liftTxt = (v) => (v === null || v === undefined ? "–" : v.toFixed(v >= 10 ? 0 : 2) + "×");
+  const DIMS = ["topic", "hook", "format", "platform", "posted by", "weekday", "time of day", "length", "mentions", "hashtags"];
+  const DIMLABEL = { hook: "Opening line", "posted by": "Posted by", "time of day": "Time of day (PT)", mentions: "Tags accounts" };
+  const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+  const ACCT = (k) => { const [pl, ...r] = k.split(" "); const a = r.join(" "); return `${PLAT[pl] || pl} ${a.startsWith("in/") ? "Kevin Jones" : a.startsWith("company/") ? "1Claw page" : "@" + a}`; };
 
   function el(tag, attrs, ...kids) {
     const e = document.createElement(tag);
@@ -162,8 +235,9 @@
 
   function renderPosts() {
     const cut = days ? Date.now() - days * 864e5 : 0;
-    let rows = DATA.posts.filter((p) => !days || (p.posted_at && Date.parse(p.posted_at) >= cut));
-    rows = rows.map((p) => ({ ...p, eng: n(p.views) ? ((n(p.likes) || 0) + (n(p.comments) || 0) + (n(p.shares) || 0)) / n(p.views) : null }));
+    let rows = DATA.posts.filter((p) => p.platform !== "youtube" && (!days || (p.posted_at && Date.parse(p.posted_at) >= cut)));
+    const LB = (INS && INS.lift_by_url) || {};
+    rows = rows.map((p) => ({ ...p, lift: (LB[p.url] || {}).lift ?? null, vel: (LB[p.url] || {}).vel || {}, eng: n(p.views) ? ((n(p.likes) || 0) + (n(p.comments) || 0) + (n(p.shares) || 0)) / n(p.views) : null }));
     rows.sort((a, b) => {
       const av = a[sortKey], bv = b[sortKey];
       if (sortKey === "posted_at") return String(bv || "").localeCompare(String(av || ""));
@@ -177,15 +251,17 @@
       el("td", { class: "n" }, show(p.likes)),
       el("td", { class: "n" }, show(p.comments)),
       el("td", { class: "n" }, show(p.shares)),
-      el("td", { class: "n" }, p.eng === null ? "–" : (p.eng * 100).toFixed(1) + "%"))) :
-      [el("tr", null, el("td", { colspan: "7", class: "sub" }, "No tracked posts in this window."))]));
+      el("td", { class: "n" }, p.eng === null ? "–" : (p.eng * 100).toFixed(1) + "%"),
+      el("td", { class: "n" }, liftTxt(p.lift)),
+      el("td", { class: "n sub" }, ["d1", "d3", "d7"].map((k) => p.vel[k] == null ? "–" : compact.format(p.vel[k])).join(" / ")))) :
+      [el("tr", null, el("td", { colspan: "9", class: "sub" }, "No tracked posts in this window."))]));
   }
 
   function render(d) {
     DATA = d;
     const tracked = d.accounts.filter((a) => a.tracked);
     const total = tracked.reduce((s, a) => s + (n(a.followers) || 0), 0);
-    const week = d.posts.filter((p) => p.posted_at && Date.parse(p.posted_at) >= Date.now() - 7 * 864e5);
+    const week = d.posts.filter((p) => p.platform !== "youtube" && p.posted_at && Date.parse(p.posted_at) >= Date.now() - 7 * 864e5);
     const weekViews = week.reduce((s, p) => s + (n(p.views) || 0), 0);
     const top = week.slice().sort((a, b) => (n(b.views) || 0) - (n(a.views) || 0))[0];
     const lede = document.getElementById("lede");
@@ -201,7 +277,7 @@
       document.getElementById("cards-" + g).replaceChildren(...d.accounts.filter((a) => a.group === g).map(card));
     }
 
-    const gain = d.posts.filter((p) => n(p.views_gain) > 0).sort((a, b) => n(b.views_gain) - n(a.views_gain)).slice(0, 8);
+    const gain = d.posts.filter((p) => p.platform !== "youtube" && n(p.views_gain) > 0).sort((a, b) => n(b.views_gain) - n(a.views_gain)).slice(0, 8);
     const gb = document.querySelector("#t-gain tbody");
     gb.replaceChildren(...(gain.length ? gain.map((p) => el("tr", null, postCell(p),
       el("td", { class: "n up" }, "+" + fmt.format(n(p.views_gain))), el("td", { class: "n" }, show(p.views)), el("td", { class: "n" }, show(p.likes)))) :
@@ -211,7 +287,7 @@
     const when = new Date(d.generated_at);
     document.getElementById("foot").textContent =
       `Updated ${when.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}. Snapshots taken daily since ${d.first_date}. ` +
-      `Views are as each platform reports them; X reposts are excluded. Engagement = (likes + comments + shares) / views.`;
+      `Views are as each platform reports them; X reposts are excluded. Engagement = (likes + comments + shares) / views. Lift = reach / that account's normal; Day 1 / 3 / 7 = views at that age (posts tracked since publishing).`;
   }
 
   document.getElementById("filters").addEventListener("click", (e) => {
@@ -231,6 +307,119 @@
     th.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
   });
 
+
+  function link(url, text) { return el("a", { href: url, target: "_blank", rel: "noopener" }, text); }
+
+  function renderBrief(b) {
+    if (!b) return;
+    document.getElementById("s-brief").hidden = false;
+    document.getElementById("brief-h").textContent = "Weekly briefing · " + new Date(b.week_of + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const col = (title, items, evk) => el("div", null, el("h3", null, el("b", null, title)),
+      el("ul", null, ...(items || []).map((x) => el("li", null, x.point,
+        el("span", { class: "ev" }, x[evk] || "", ...(x.urls || []).slice(0, 3).map((u, i) => el("span", null, " ", link(u, "example " + (i + 1)))))))));
+    document.getElementById("brief").replaceChildren(
+      el("p", { class: "head" }, b.headline || ""),
+      el("div", { class: "bcols" }, col("Do more", b.do_more, "evidence"), col("Stop", b.stop, "evidence"), col("Test next", b.test_next, "why")),
+      (b.writer_rules || []).length ? el("p", { class: "rules" }, el("b", null, "Rules the content generators now follow: "), b.writer_rules.join(" · ")) : null,
+      el("p", { class: "rules" }, b.caveats || ""));
+  }
+
+  function renderDim() {
+    const rows = ((INS[win] || {})[dim]) || [];
+    const max = Math.max(2, ...rows.map((r) => Math.min(r.median_lift, 4)));
+    document.getElementById("dimname").textContent = DIMLABEL[dim] || cap(dim);
+    document.querySelector("#t-dim tbody").replaceChildren(...rows.map((r) => {
+      const v = Math.min(r.median_lift, 4), basePct = (1 / max) * 100, endPct = (v / max) * 100;
+      const bar = el("div", { class: "bar " + (v >= 1 ? "pos" : "neg") });
+      bar.style.left = Math.min(basePct, endPct) + "%"; bar.style.width = Math.max(1.5, Math.abs(endPct - basePct)) + "%";
+      const base = el("div", { class: "base" }); base.style.left = basePct + "%";
+      const label = dim === "platform" ? ACCT(r.value) : r.value;
+      return el("tr", { class: r.n < 4 ? "thin" : "" },
+        el("td", null, label, r.n < 4 ? el("span", { class: "pill" }, "thin") : null),
+        el("td", { class: "n" }, fmt.format(r.n)),
+        el("td", { class: "n" }, liftTxt(r.median_lift)),
+        el("td", { title: `${label}: median ${liftTxt(r.median_lift)} across ${r.n} posts` }, el("div", { class: "liftbar" }, base, bar)),
+        el("td", { class: "n" }, Math.round(r.hit_rate * 100) + "%"),
+        el("td", { class: "n" }, r.median_eng == null ? "–" : (r.median_eng * 100).toFixed(1) + "%"),
+        el("td", { class: "post" }, r.best && r.best.url ? link(r.best.url, (r.best.text || "").slice(0, 80) + "…") : "–", el("span", { class: "pill" }, liftTxt(r.best && r.best.lift))));
+    }));
+  }
+
+  function renderTrend(ws) {
+    if (!ws || ws.length < 2) return;
+    document.getElementById("s-trend").hidden = false;
+    const NS = "http://www.w3.org/2000/svg", W = 700, H = 180, L = 34, B = 22, T = 8;
+    const box = document.getElementById("trend"), tip = document.getElementById("tip");
+    const svg = document.createElementNS(NS, "svg"); svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", "Median lift by week: " + ws.map((w) => `${w.week} ${w.median_lift}`).join(", "));
+    const hi = Math.max(1.5, ...ws.map((w) => w.median_lift)), y = (v) => T + (1 - v / hi) * (H - T - B);
+    const mk = (tag, at) => { const e = document.createElementNS(NS, tag); for (const k in at) e.setAttribute(k, at[k]); return e; };
+    for (const g of [0.5, 1, 1.5].filter((g) => g <= hi)) {
+      svg.append(mk("line", { x1: L, x2: W, y1: y(g), y2: y(g), stroke: g === 1 ? "#A09BA6" : "#2A272E", "stroke-width": 1, "stroke-dasharray": g === 1 ? "4 3" : "" }));
+      const t = mk("text", { x: L - 6, y: y(g) + 4, "text-anchor": "end", fill: "#A09BA6", "font-size": 11 }); t.textContent = g + "×"; svg.append(t);
+    }
+    const bw = (W - L) / ws.length;
+    ws.forEach((w, i) => {
+      const x = L + i * bw + 2, top = y(w.median_lift), base = y(0);
+      const r = mk("rect", { x, y: top, width: Math.max(2, bw - 4), height: Math.max(1, base - top), rx: 3, fill: w.median_lift >= 1 ? "#E21D20" : "#5A5560", opacity: w.n < 4 ? 0.45 : 1 });
+      const hit = mk("rect", { x: L + i * bw, y: T, width: bw, height: H - T - B, fill: "transparent" });
+      const show = (ev) => { tip.textContent = `Week of ${w.week}: ${liftTxt(w.median_lift)} median over ${w.n} posts`; tip.style.opacity = 1;
+        const bb = box.getBoundingClientRect(); tip.style.left = Math.min(ev.clientX - bb.left + 10, bb.width - 230) + "px"; tip.style.top = (ev.clientY - bb.top - 34) + "px"; };
+      hit.addEventListener("mousemove", show); hit.addEventListener("mouseleave", () => (tip.style.opacity = 0));
+      svg.append(r, hit);
+      if (i % Math.ceil(ws.length / 8) === 0) { const t = mk("text", { x: x + bw / 2 - 2, y: H - 6, "text-anchor": "middle", fill: "#A09BA6", "font-size": 11 });
+        t.textContent = new Date(w.week + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }); svg.append(t); }
+    });
+    box.append(svg);
+  }
+
+  function renderClusters(cs) {
+    if (!cs || !cs.length) return;
+    document.getElementById("s-clusters").hidden = false;
+    document.getElementById("clusters").replaceChildren(...cs.slice(0, 9).map((c) => el("div", { class: "cl" },
+      el("p", null, c.message.length > 150 ? c.message.slice(0, 150) + "…" : c.message),
+      el("table", null, el("thead", null, el("tr", null, el("th", null, "Where"), el("th", { class: "n" }, "Lift"), el("th", { class: "n" }, "Views"), el("th", { class: "n" }, "Likes"))),
+        el("tbody", null, ...c.posts.map((p) => el("tr", null, el("td", null, link(p.url, ACCT(p.platform + " " + p.account))),
+          el("td", { class: "n" }, liftTxt(p.lift)), el("td", { class: "n" }, show(p.views)), el("td", { class: "n" }, show(p.likes)))))))));
+  }
+
+  function renderGrowth(g) {
+    const keys = Object.keys(g || {}).filter((k) => !k.startsWith("youtube"));
+    if (!keys.length) return;
+    document.getElementById("s-growth").hidden = false;
+    const sel = document.getElementById("growsel");
+    sel.replaceChildren(...keys.map((k) => el("option", { value: k }, ACCT(k))));
+    const draw = () => document.querySelector("#t-grow tbody").replaceChildren(...g[sel.value].slice().reverse().map((r) => el("tr", null,
+      el("td", null, r.date + (r.days > 1 ? ` (${r.days} days)` : "")), el("td", { class: "n" }, fmt.format(r.followers)),
+      el("td", { class: "n " + (r.delta > 0 ? "up" : r.delta < 0 ? "down" : "") }, (r.delta > 0 ? "+" : "") + fmt.format(r.delta)),
+      el("td", { class: "n" }, r.posts), el("td", { class: "post" }, r.top ? link(r.top.url, r.top.text) : el("span", { class: "sub" }, "nothing posted")))));
+    sel.onchange = draw; draw();
+  }
+
+  function renderYT(ps) {
+    if (!ps || !ps.length) return;
+    document.getElementById("s-yt").hidden = false;
+    document.querySelector("#t-yt tbody").replaceChildren(...ps.map((p) => el("tr", null, el("td", { class: "post" }, link(p.url, p.text)),
+      el("td", { class: "n" }, show(p.views)), el("td", { class: "n" }, show(p.likes)))));
+  }
+
+  function renderInsights(ins) {
+    INS = ins;
+    renderBrief(ins.briefing);
+    document.getElementById("s-working").hidden = false;
+    document.getElementById("dimbtns").replaceChildren(...DIMS.map((d) => el("button", { type: "button", "data-dim": d, "aria-pressed": String(d === dim) }, DIMLABEL[d] || cap(d))));
+    renderDim(); renderTrend(ins.weekly_lift); renderClusters(ins.clusters); renderGrowth(ins.growth); renderYT(ins.personal_youtube);
+    if (DATA) renderPosts();
+  }
+  document.getElementById("dimbtns").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-dim]"); if (!b) return; dim = b.dataset.dim;
+    document.querySelectorAll("#dimbtns button").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); renderDim();
+  });
+  document.getElementById("winbtns").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-win]"); if (!b || !INS) return; win = b.dataset.win;
+    document.querySelectorAll("#winbtns button").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); renderDim();
+  });
+  fetch("insights.json?v=" + Date.now()).then((r) => (r.ok ? r.json() : null)).then((ins) => ins && renderInsights(ins)).catch(() => {});
   fetch("data.json?v=" + Date.now()).then((r) => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
     .then(render)
     .catch((e) => { const l = document.getElementById("lede"); l.className = "lede err"; l.textContent = "Couldn't load the data file (" + e.message + "). It refreshes daily; try again shortly."; });
