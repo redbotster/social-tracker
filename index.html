@@ -71,6 +71,9 @@
   .liftbar .bar { position: absolute; top: 0; height: 10px; border-radius: 4px; }
   .liftbar .bar.pos { background: var(--red); } .liftbar .bar.neg { background: #5A5560; }
   tr.thin td { opacity: .55; }
+  #aud-cards { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); margin-bottom: 12px; }
+  .sub3 { font-size: 13px; color: var(--muted); margin: 18px 0 6px; font-weight: 600; }
+  .pill.paid { border-color: #B26B00; color: #E0A040; }
   .pill.win { color: var(--text, #FAFAFA); border-color: #E21D20; }
   .pill { font-family: var(--mono); font-size: 10.5px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; margin-left: 6px; white-space: nowrap; }
   .chart { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; position: relative; }
@@ -114,6 +117,29 @@
     <h2>What drives clicks</h2>
     <p class="note" id="clicks-note">Link clicks and profile clicks are the closest we get to "this post sent people to us". X only shares them for @1clawAI posts from the last 30 days. Ranked by total clicks.</p>
     <div class="tablebox"><table id="t-clicks"><thead><tr><th>Post</th><th class="n">Impressions</th><th class="n">Link clicks</th><th class="n">Profile clicks</th><th class="n">Per 1k</th><th class="n">Lift</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section id="s-aud" hidden>
+    <h2>Who engages</h2>
+    <p class="note" id="aud-note">The people who replied to or reposted our X posts, sorted into groups from their profile and what they wrote. X doesn't show who liked a post, so likes aren't counted. Right audience = builders, security people and founders.</p>
+    <div class="cards" id="aud-cards"></div>
+    <div class="tablebox"><table id="t-aud"><thead><tr><th>Post</th><th class="n">People</th><th class="n">Right audience</th><th>Who</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section id="s-peers" hidden>
+    <h2>Our niche</h2>
+    <p class="note" id="peers-note">Comparable accounts on X, scored the same way as ours (each post against that account's own normal). If the whole niche had a slow week, a slow week for us isn't about our posts.</p>
+    <div class="tablebox"><table id="t-pulse"><thead><tr><th>Week</th><th class="n">Niche typical post</th><th class="n">Our typical post</th></tr></thead><tbody></tbody></table></div>
+    <h3 class="sub3">Topics: niche vs us (last 45 days)</h3>
+    <div class="tablebox"><table id="t-ptopics"><thead><tr><th>Topic</th><th class="n">Niche posts</th><th class="n">Niche lift</th><th class="n">Our lift</th></tr></thead><tbody></tbody></table></div>
+    <h3 class="sub3">Breaking out in the niche (last 10 days)</h3>
+    <div class="tablebox"><table id="t-ptop"><thead><tr><th>Post</th><th class="n">Lift</th><th class="n">Views</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section id="s-next" hidden>
+    <h2>Up next on @1clawAI</h2>
+    <p class="note" id="next-note">Every queued post gets a predicted lift from how posts like it have done for us (topic, opening, length, hashtags, tags, link). Drafts under 0.85× get one rewrite, and the rewrite is kept only if it scores clearly higher and passes the writing check. Posts marked "repost" are proven winners from another platform.</p>
+    <div class="tablebox"><table id="t-next"><thead><tr><th>#</th><th>Post</th><th class="n">Predicted</th><th>Why</th></tr></thead><tbody></tbody></table></div>
   </section>
 
   <section id="s-exp" hidden>
@@ -251,7 +277,7 @@
     const cut = days ? Date.now() - days * 864e5 : 0;
     let rows = DATA.posts.filter((p) => p.platform !== "youtube" && (!days || (p.posted_at && Date.parse(p.posted_at) >= cut)));
     const LB = (INS && INS.lift_by_url) || {};
-    rows = rows.map((p) => ({ ...p, lift: (LB[p.url] || {}).lift ?? null, vel: (LB[p.url] || {}).vel || {}, lc: (LB[p.url] || {}).link_clicks, pc: (LB[p.url] || {}).profile_clicks,
+    rows = rows.map((p) => ({ ...p, lift: (LB[p.url] || {}).lift ?? null, vel: (LB[p.url] || {}).vel || {}, promoted: (LB[p.url] || {}).promoted, lc: (LB[p.url] || {}).link_clicks, pc: (LB[p.url] || {}).profile_clicks,
       clicks: (LB[p.url] || {}).profile_clicks == null ? null : ((LB[p.url] || {}).link_clicks || 0) + (LB[p.url] || {}).profile_clicks, eng: n(p.views) ? ((n(p.likes) || 0) + (n(p.comments) || 0) + (n(p.shares) || 0)) / n(p.views) : null }));
     rows.sort((a, b) => {
       const av = a[sortKey], bv = b[sortKey];
@@ -267,7 +293,7 @@
       el("td", { class: "n" }, show(p.comments)),
       el("td", { class: "n" }, show(p.shares)),
       el("td", { class: "n" }, p.eng === null ? "–" : (p.eng * 100).toFixed(1) + "%"),
-      el("td", { class: "n" }, liftTxt(p.lift)),
+      el("td", { class: "n" }, p.promoted ? el("span", { class: "pill paid", title: p.promoted === "confirmed" ? "Paid promotion (X confirms). Lift uses organic views only." : "Looks paid: huge views with almost no engagement. Not scored." }, p.promoted === "confirmed" ? "paid" : "paid?") : null, p.promoted === "likely" ? "" : liftTxt(p.lift)),
       el("td", { class: "n sub" }, ["d1", "d3", "d7"].map((k) => p.vel[k] == null ? "–" : compact.format(p.vel[k])).join(" / ")),
       el("td", { class: "n sub" }, p.pc == null ? "–" : `${p.lc == null ? "–" : p.lc} / ${p.pc}`))) :
       [el("tr", null, el("td", { colspan: "10", class: "sub" }, "No tracked posts in this window."))]));
@@ -423,6 +449,44 @@
       el("td", { class: "n" }, liftTxt(p.lift)))));
   }
 
+  function renderAud(a) {
+    if (!a || !a.posts) return;
+    document.getElementById("s-aud").hidden = false;
+    const LBL = { builder: "Builders", security: "Security", founder: "Founders / execs", crypto: "Crypto traders", bot: "Bots / farms", other: "Other" };
+    const tot = Object.values(a.totals).reduce((x, y) => x + y, 0);
+    document.getElementById("aud-note").append(` Last 30 days: ${tot} people across ${a.posts} posts, ${Math.round(a.right_share * 100)}% right audience.`);
+    document.getElementById("aud-cards").replaceChildren(...Object.entries(a.totals).map(([k, v]) => el("div", { class: "card" },
+      el("div", { class: "sub" }, LBL[k] || k), el("div", { class: "num" }, fmt.format(v)), el("div", { class: "sub" }, tot ? Math.round(100 * v / tot) + "%" : "–"))));
+    document.querySelector("#t-aud tbody").replaceChildren(...a.top.map((p) => el("tr", null, el("td", { class: "post" }, link(p.url, p.text)),
+      el("td", { class: "n" }, String(p.aud.total)), el("td", { class: "n" }, String(p.aud.right)),
+      el("td", { class: "sub" }, (p.aud.right_people || []).join(", ") || "–"))));
+  }
+
+  function renderPeers(pr) {
+    if (!pr || !pr.posts) return;
+    document.getElementById("s-peers").hidden = false;
+    document.getElementById("peers-note").append(" Accounts: " + pr.accounts.map((a) => "@" + a).join(", ") + ".");
+    document.querySelector("#t-pulse tbody").replaceChildren(...pr.pulse.slice().reverse().map((w) => el("tr", null,
+      el("td", null, "Week of " + new Date(w.week + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })),
+      el("td", { class: "n" + (w.n_niche < 4 ? " sub" : "") }, liftTxt(w.niche) + ` (${w.n_niche})`),
+      el("td", { class: "n" + (w.n_ours < 4 ? " sub" : "") }, w.ours == null ? "–" : liftTxt(w.ours) + ` (${w.n_ours})`))));
+    document.querySelector("#t-ptopics tbody").replaceChildren(...pr.topics.filter((t) => t.value !== "untagged").map((t) => el("tr", { class: t.n < 4 ? "thin" : "" },
+      el("td", null, t.value), el("td", { class: "n" }, String(t.n)), el("td", { class: "n" }, liftTxt(t.median_lift)),
+      el("td", { class: "n" }, t.ours == null ? "–" : liftTxt(t.ours) + ` (${t.ours_n})`))));
+    document.querySelector("#t-ptop tbody").replaceChildren(...pr.top.map((p) => el("tr", null,
+      el("td", { class: "post" }, el("span", { class: "tag" }, "@" + p.account + (p.topic ? " · " + p.topic : "")), link(p.url, p.text)),
+      el("td", { class: "n" }, liftTxt(p.lift)), el("td", { class: "n" }, show(p.views)))));
+  }
+
+  function renderNext(u) {
+    if (!u || !u.queue || !u.queue.length) return;
+    document.getElementById("s-next").hidden = false;
+    document.querySelector("#t-next tbody").replaceChildren(...u.queue.slice(0, 15).map((q, i) => el("tr", { class: q.score < u.weak_below ? "" : "" },
+      el("td", { class: "sub" }, String(i + 1)), el("td", { class: "post" }, q.text, q.rewritten_from ? el("span", { class: "pill win" }, "rewritten from " + liftTxt(q.rewritten_from)) : null),
+      el("td", { class: "n" }, el("span", { class: q.score < u.weak_below ? "down" : q.score >= 1.05 ? "up" : "" }, liftTxt(q.score))),
+      el("td", { class: "sub" }, (q.why || []).slice(0, 2).join("; ") || "–"))));
+  }
+
   function renderExps(xs) {
     if (!xs || !xs.length) return;
     document.getElementById("s-exp").hidden = false;
@@ -447,7 +511,7 @@
     renderBrief(ins.briefing);
     document.getElementById("s-working").hidden = false;
     document.getElementById("dimbtns").replaceChildren(...DIMS.map((d) => el("button", { type: "button", "data-dim": d, "aria-pressed": String(d === dim) }, DIMLABEL[d] || cap(d))));
-    renderDim(); renderTrend(ins.weekly_lift); renderClusters(ins.clusters); renderGrowth(ins.growth); renderYT(ins.personal_youtube); renderClicks(ins.clicks); renderExps(ins.experiments);
+    renderDim(); renderTrend(ins.weekly_lift); renderClusters(ins.clusters); renderGrowth(ins.growth); renderYT(ins.personal_youtube); renderClicks(ins.clicks); renderExps(ins.experiments); renderAud(ins.audience); renderPeers(ins.peers);
     if (DATA) renderPosts();
   }
   document.getElementById("dimbtns").addEventListener("click", (e) => {
@@ -458,6 +522,7 @@
     const b = e.target.closest("button[data-win]"); if (!b || !INS) return; win = b.dataset.win;
     document.querySelectorAll("#winbtns button").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); renderDim();
   });
+  fetch("upnext.json?v=" + Date.now()).then((r) => (r.ok ? r.json() : null)).then((u) => u && renderNext(u)).catch(() => {});
   fetch("insights.json?v=" + Date.now()).then((r) => (r.ok ? r.json() : null)).then((ins) => ins && renderInsights(ins)).catch(() => {});
   fetch("data.json?v=" + Date.now()).then((r) => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
     .then(render)
