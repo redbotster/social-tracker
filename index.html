@@ -71,6 +71,7 @@
   .liftbar .bar { position: absolute; top: 0; height: 10px; border-radius: 4px; }
   .liftbar .bar.pos { background: var(--red); } .liftbar .bar.neg { background: #5A5560; }
   tr.thin td { opacity: .55; }
+  .pill.win { color: var(--text, #FAFAFA); border-color: #E21D20; }
   .pill { font-family: var(--mono); font-size: 10.5px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; margin-left: 6px; white-space: nowrap; }
   .chart { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; position: relative; }
   .chart svg { width: 100%; height: 180px; display: block; overflow: visible; }
@@ -106,7 +107,19 @@
       <button type="button" data-win="dimensions" aria-pressed="true">Last 120 days</button>
       <button type="button" data-win="dimensions_30d" aria-pressed="false">Last 30 days</button>
     </div>
-    <div class="tablebox"><table id="t-dim"><thead><tr><th id="dimname">Topic</th><th class="n">Posts</th><th class="n">Median lift</th><th></th><th class="n">Hit rate</th><th class="n">Engagement</th><th>Best example</th></tr></thead><tbody></tbody></table></div>
+    <div class="tablebox"><table id="t-dim"><thead><tr><th id="dimname">Topic</th><th class="n">Posts</th><th class="n">Median lift</th><th></th><th class="n">Hit rate</th><th class="n">Engagement</th><th class="n" title="Link + profile clicks per 1,000 impressions, @1clawAI posts from the last 30 days only">Clicks / 1k</th><th>Best example</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section id="s-clicks" hidden>
+    <h2>What drives clicks</h2>
+    <p class="note" id="clicks-note">Link clicks and profile clicks are the closest we get to "this post sent people to us". X only shares them for @1clawAI posts from the last 30 days. Ranked by total clicks.</p>
+    <div class="tablebox"><table id="t-clicks"><thead><tr><th>Post</th><th class="n">Impressions</th><th class="n">Link clicks</th><th class="n">Profile clicks</th><th class="n">Per 1k</th><th class="n">Lift</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section id="s-exp" hidden>
+    <h2>Experiments</h2>
+    <p class="note">Each "test next" from the weekly briefing becomes a tracked test. Posts after the start date that did the thing are compared with the ones that didn't, on lift. A test ends after at least 6 posts on each side and 10 days, or after 28 days. A result of 1.2× or better counts as worked, and a test that worked with a wording change gets added to the rules the content generators follow.</p>
+    <div class="tablebox"><table id="t-exp"><thead><tr><th>Test</th><th>Started</th><th>Status</th><th class="n">Tried</th><th class="n">Others</th><th class="n">Result</th></tr></thead><tbody></tbody></table></div>
   </section>
 
   <section id="s-trend" hidden>
@@ -152,6 +165,7 @@
       <th class="n" data-sort="eng" tabindex="0">Engagement</th>
       <th class="n" data-sort="lift" tabindex="0">Lift</th>
       <th class="n">Day 1 / 3 / 7</th>
+      <th class="n" data-sort="clicks" tabindex="0" title="Link / profile clicks (@1clawAI, last 30 days)">Clicks</th>
     </tr></thead><tbody></tbody></table></div>
   </section>
 
@@ -237,7 +251,8 @@
     const cut = days ? Date.now() - days * 864e5 : 0;
     let rows = DATA.posts.filter((p) => p.platform !== "youtube" && (!days || (p.posted_at && Date.parse(p.posted_at) >= cut)));
     const LB = (INS && INS.lift_by_url) || {};
-    rows = rows.map((p) => ({ ...p, lift: (LB[p.url] || {}).lift ?? null, vel: (LB[p.url] || {}).vel || {}, eng: n(p.views) ? ((n(p.likes) || 0) + (n(p.comments) || 0) + (n(p.shares) || 0)) / n(p.views) : null }));
+    rows = rows.map((p) => ({ ...p, lift: (LB[p.url] || {}).lift ?? null, vel: (LB[p.url] || {}).vel || {}, lc: (LB[p.url] || {}).link_clicks, pc: (LB[p.url] || {}).profile_clicks,
+      clicks: (LB[p.url] || {}).profile_clicks == null ? null : ((LB[p.url] || {}).link_clicks || 0) + (LB[p.url] || {}).profile_clicks, eng: n(p.views) ? ((n(p.likes) || 0) + (n(p.comments) || 0) + (n(p.shares) || 0)) / n(p.views) : null }));
     rows.sort((a, b) => {
       const av = a[sortKey], bv = b[sortKey];
       if (sortKey === "posted_at") return String(bv || "").localeCompare(String(av || ""));
@@ -253,8 +268,9 @@
       el("td", { class: "n" }, show(p.shares)),
       el("td", { class: "n" }, p.eng === null ? "–" : (p.eng * 100).toFixed(1) + "%"),
       el("td", { class: "n" }, liftTxt(p.lift)),
-      el("td", { class: "n sub" }, ["d1", "d3", "d7"].map((k) => p.vel[k] == null ? "–" : compact.format(p.vel[k])).join(" / ")))) :
-      [el("tr", null, el("td", { colspan: "9", class: "sub" }, "No tracked posts in this window."))]));
+      el("td", { class: "n sub" }, ["d1", "d3", "d7"].map((k) => p.vel[k] == null ? "–" : compact.format(p.vel[k])).join(" / ")),
+      el("td", { class: "n sub" }, p.pc == null ? "–" : `${p.lc == null ? "–" : p.lc} / ${p.pc}`))) :
+      [el("tr", null, el("td", { colspan: "10", class: "sub" }, "No tracked posts in this window."))]));
   }
 
   function render(d) {
@@ -341,6 +357,7 @@
         el("td", { title: `${label}: median ${liftTxt(r.median_lift)} across ${r.n} posts` }, el("div", { class: "liftbar" }, base, bar)),
         el("td", { class: "n" }, Math.round(r.hit_rate * 100) + "%"),
         el("td", { class: "n" }, r.median_eng == null ? "–" : (r.median_eng * 100).toFixed(1) + "%"),
+        el("td", { class: "n" + (r.n_clicks && r.n_clicks < 4 ? " sub" : "") }, r.clicks_1k == null ? "–" : r.clicks_1k.toFixed(1)),
         el("td", { class: "post" }, r.best && r.best.url ? link(r.best.url, (r.best.text || "").slice(0, 80) + "…") : "–", el("span", { class: "pill" }, liftTxt(r.best && r.best.lift))));
     }));
   }
@@ -396,6 +413,28 @@
     sel.onchange = draw; draw();
   }
 
+  function renderClicks(c) {
+    if (!c || !c.posts) return;
+    document.getElementById("s-clicks").hidden = false;
+    document.getElementById("clicks-note").append(` Last 30 days: ${fmt.format(c.link_30d)} link clicks and ${fmt.format(c.profile_30d)} profile clicks across ${c.posts} posts, ${c.median_1k} per 1,000 impressions for a typical post.`);
+    document.querySelector("#t-clicks tbody").replaceChildren(...c.top.map((p) => el("tr", null, el("td", { class: "post" }, link(p.url, p.text)),
+      el("td", { class: "n" }, show(p.impressions)), el("td", { class: "n" }, p.link_clicks == null ? "no link" : fmt.format(p.link_clicks)),
+      el("td", { class: "n" }, fmt.format(p.profile_clicks)), el("td", { class: "n" }, p.clicks_1k == null ? "–" : p.clicks_1k.toFixed(1)),
+      el("td", { class: "n" }, liftTxt(p.lift)))));
+  }
+
+  function renderExps(xs) {
+    if (!xs || !xs.length) return;
+    document.getElementById("s-exp").hidden = false;
+    const ST = { active: "Running", worked: "Worked", "did worse": "Did worse", "no clear difference": "No clear difference", "not enough posts": "Not enough posts" };
+    document.querySelector("#t-exp tbody").replaceChildren(...xs.slice().reverse().map((x) => { const r = x.result || {};
+      return el("tr", null, el("td", { class: "post" }, x.point, el("span", { class: "ev" }, x.platform && x.platform !== "any" ? "On " + (PLAT[x.platform] || x.platform) : "All platforms",
+          x.writer_instruction ? " · generators try it on every other post" : " · for Kevin to try")),
+        el("td", null, x.started), el("td", null, el("span", { class: "pill" + (x.status === "worked" ? " win" : "") }, ST[x.status] || x.status)),
+        el("td", { class: "n" }, String(r.tried ?? 0)), el("td", { class: "n" }, String(r.compared ?? 0)),
+        el("td", { class: "n" }, r.ratio == null ? (r.pending ? `${r.pending} posts maturing` : "–") : r.ratio.toFixed(2) + "×")); }));
+  }
+
   function renderYT(ps) {
     if (!ps || !ps.length) return;
     document.getElementById("s-yt").hidden = false;
@@ -408,7 +447,7 @@
     renderBrief(ins.briefing);
     document.getElementById("s-working").hidden = false;
     document.getElementById("dimbtns").replaceChildren(...DIMS.map((d) => el("button", { type: "button", "data-dim": d, "aria-pressed": String(d === dim) }, DIMLABEL[d] || cap(d))));
-    renderDim(); renderTrend(ins.weekly_lift); renderClusters(ins.clusters); renderGrowth(ins.growth); renderYT(ins.personal_youtube);
+    renderDim(); renderTrend(ins.weekly_lift); renderClusters(ins.clusters); renderGrowth(ins.growth); renderYT(ins.personal_youtube); renderClicks(ins.clicks); renderExps(ins.experiments);
     if (DATA) renderPosts();
   }
   document.getElementById("dimbtns").addEventListener("click", (e) => {
