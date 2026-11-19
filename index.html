@@ -482,7 +482,7 @@
     if (!u || !u.queue || !u.queue.length) return;
     document.getElementById("s-next").hidden = false;
     document.querySelector("#t-next tbody").replaceChildren(...u.queue.slice(0, 15).map((q, i) => el("tr", { class: q.score < u.weak_below ? "" : "" },
-      el("td", { class: "sub" }, String(i + 1)), el("td", { class: "post" }, q.text, q.rewritten_from ? el("span", { class: "pill win" }, "rewritten from " + liftTxt(q.rewritten_from)) : null),
+      el("td", { class: "sub" }, String(i + 1)), el("td", { class: "post" }, q.text, q.rewritten_from ? el("span", { class: "pill win" }, "rewritten from " + liftTxt(q.rewritten_from)) : null, q.repost ? el("span", { class: "pill win" }, "repost") : null),
       el("td", { class: "n" }, el("span", { class: q.score < u.weak_below ? "down" : q.score >= 1.05 ? "up" : "" }, liftTxt(q.score))),
       el("td", { class: "sub" }, (q.why || []).slice(0, 2).join("; ") || "–"))));
   }
